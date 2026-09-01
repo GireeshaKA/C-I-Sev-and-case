@@ -34,6 +34,7 @@
 ### Styling Approach (Planned)
 - CSS Modules or Tailwind CSS (to be decided in implementation phase).
 - Design direction: Enphase-inspired orange accent (#F37421) with neutral colors, clean/analytical layout, high information density.
+- See `docs/ui-ux-specification.md` for detailed visual design direction based on Phase 1 screenshot analysis.
 
 ### Code Quality
 - **ESLint** with TypeScript and React plugins — Static analysis and code style enforcement.
@@ -77,6 +78,21 @@ When live data integration is required:
 4. No UI code changes required for the data source switch.
 
 **Important:** The frontend will never directly access Incorta. All production data access will flow through a backend API layer that handles authentication, authorization, and data transformation.
+
+### Phase 1 Data Model Corrections
+
+The Phase 1 screenshot analysis revealed significant differences from the Phase 0 assumptions:
+
+- **Severity levels:** 1, 2, 3, 4 (not S0-S4; no S0 exists; no "S" prefix)
+- **Severity sub-categories:** (a), (b), (c) based on case status — unique to this dashboard
+- **Site Status values:** Operational descriptions (Normal, Production Issue, Envoy Not Reporting, Microinverters Not Reporting, Meter Issue) — not abstract categories
+- **Site Stage values:** Ready, Final, Verifying — not Active/Inactive/Decommissioned
+- **Site ID format:** Numeric (e.g., `6256648`) — not prefixed strings
+- **Case Number format:** 8-digit numeric (e.g., `20139519`) — not prefixed strings
+- **Case Status values:** New, Case - In Progress — not Open/Closed/Escalated
+- **Historical data:** Per-installer pivot with daily granularity, Sev-1/2/3 only (no Sev-4)
+
+The mock data and TypeScript types from Phase 0 must be updated to match these confirmed values before implementation begins. See `docs/data-dictionary.md` for full corrections.
 
 ## Project Structure
 
