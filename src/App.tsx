@@ -284,42 +284,69 @@ function OverviewPage() {
     <div className="page-content">
       <h2 className="page-title">Overview</h2>
 
-      {/* Primary KPIs */}
-      <div className="kpi-row">
-        <KpiCard label={kpis.totalSites.label} value={kpis.totalSites.value} primary />
-        <KpiCard label={kpis.pctSev123.label} value={kpis.pctSev123.value} className="orange" />
-        <KpiCard label={kpis.countSev123.label} value={kpis.countSev123.value} className="orange" />
-        <KpiCard label={kpis.sev123a.label} value={kpis.sev123a.value} className="sev1" />
-        <KpiCard label={kpis.sev123b.label} value={kpis.sev123b.value} className="sev3" />
-        <KpiCard label={kpis.sev123c.label} value={kpis.sev123c.value} />
-        <KpiCard label={kpis.pctSev4.label} value={kpis.pctSev4.value} className="sev4" />
-        <KpiCard label={kpis.countSev4.label} value={kpis.countSev4.value} className="sev4" />
+      {/* PRIMARY KPIs — executive summary */}
+      <div className="kpi-group">
+        <div className="kpi-group-label">Summary</div>
+        <div className="kpi-row">
+          <KpiCard label={kpis.totalSites.label} value={kpis.totalSites.value} primary />
+          <KpiCard label={kpis.pctSev123.label} value={kpis.pctSev123.value} className="orange" primary />
+          <KpiCard label={kpis.countSev123.label} value={kpis.countSev123.value} className="orange" />
+        </div>
       </div>
 
-      {/* Percentage KPIs */}
-      <div className="kpi-row">
-        <KpiCard label={kpis.pctSev1.label} value={kpis.pctSev1.value} className="sev1" />
-        <KpiCard label={kpis.pctSev2.label} value={kpis.pctSev2.value} className="sev2" />
-        <KpiCard label={kpis.pctSev3.label} value={kpis.pctSev3.value} className="sev3" />
-        <KpiCard label={kpis.pctSev4.label} value={kpis.pctSev4.value} className="sev4" />
+      {/* SECONDARY KPIs — subcategory breakdown */}
+      <div className="kpi-group">
+        <div className="kpi-group-label">Sev 1/2/3 Subcategories</div>
+        <div className="kpi-row">
+          <KpiCard label={kpis.sev123a.label} value={kpis.sev123a.value} className="sev1" />
+          <KpiCard label={kpis.sev123b.label} value={kpis.sev123b.value} className="sev3" />
+          <KpiCard label={kpis.sev123c.label} value={kpis.sev123c.value} />
+          <KpiCard label={kpis.pctSev4.label} value={kpis.pctSev4.value} className="sev4" />
+          <KpiCard label={kpis.countSev4.label} value={kpis.countSev4.value} className="sev4" />
+        </div>
+      </div>
+
+      {/* TERTIARY KPIs — per-level percentages */}
+      <div className="kpi-group">
+        <div className="kpi-group-label">Per-Level Breakdown</div>
+        <div className="kpi-row kpi-row-compact">
+          <KpiCard label={kpis.pctSev1.label} value={kpis.pctSev1.value} className="sev1" />
+          <KpiCard label={kpis.pctSev2.label} value={kpis.pctSev2.value} className="sev2" />
+          <KpiCard label={kpis.pctSev3.label} value={kpis.pctSev3.value} className="sev3" />
+          <KpiCard label={kpis.pctSev4.label} value={kpis.pctSev4.value} className="sev4" />
+        </div>
+      </div>
+
+      {/* Severity Breakdown Section — matches Incorta layout */}
+      <div className="section-card">
+        <h3>Severity Breakdown</h3>
+        <div className="sev-breakdown-grid">
+          {sevDist.filter((d) => d.level !== null).map((d) => (
+            <div key={d.level} className="sev-breakdown-item">
+              <div className="sev-breakdown-header">
+                <span className={sevBadgeClass(d.level)}>Sev {d.level}</span>
+                <span className="sev-breakdown-total">{d.count}</span>
+              </div>
+              <div className="sev-breakdown-subs">
+                <span className="sev-sub"><strong>{d.subcategoryA}</strong> <small>(a)</small></span>
+                <span className="sev-sub"><strong>{d.subcategoryB}</strong> <small>(b)</small></span>
+                <span className="sev-sub"><strong>{d.subcategoryC}</strong> <small>(c)</small></span>
+              </div>
+              <div className="sev-breakdown-bar">
+                <div style={{ width: `${Math.min((d.count / (sites.length || 1)) * 100 * 5, 100)}%`, background: SEV_COLORS[d.level as number] }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="sev-breakdown-legend">
+          <span>(a) Open case, not In Progress</span>
+          <span>(b) Open case, In Progress</span>
+          <span>(c) No open cases</span>
+        </div>
       </div>
 
       {/* Charts */}
       <div className="chart-grid">
-        <div className="section-card">
-          <h3>Severity Distribution</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={sevBarData} layout="vertical" margin={{ left: 10 }}>
-              <XAxis type="number" />
-              <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-                {sevBarData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
         <div className="section-card">
           <h3>Severity Subcategory Breakdown</h3>
           <ResponsiveContainer width="100%" height={220}>
@@ -334,40 +361,24 @@ function OverviewPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
 
-      <div className="chart-grid">
         <div className="section-card">
-          <h3>Site Status Distribution<span className="demo-label">DEMO</span></h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <h3>Site Status Distribution<span className="demo-label">MOCK</span></h3>
+          <p className="section-subtitle">Status counts are generated from mock data — not production values</p>
+          <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`} labelLine={{ strokeWidth: 1 }} style={{ fontSize: 10 }}>
+              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, value }) => `${name}: ${value}`} labelLine={{ strokeWidth: 1 }} style={{ fontSize: 10 }}>
                 {statusData.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="section-card">
-          <h3>Sites by Severity</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 0' }}>
-            {sevDist.filter((d) => d.level !== null).map((d) => (
-              <div key={d.level} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className={sevBadgeClass(d.level)} style={{ width: 50, textAlign: 'center' }}>Sev {d.level}</span>
-                <div style={{ flex: 1, background: '#E5E7EB', borderRadius: 4, height: 20, position: 'relative' }}>
-                  <div style={{ width: `${Math.min((d.count / (sites.length || 1)) * 100 * 5, 100)}%`, height: '100%', background: SEV_COLORS[d.level as number], borderRadius: 4 }} />
-                </div>
-                <span style={{ fontWeight: 600, minWidth: 40, textAlign: 'right' }}>{d.count}</span>
-                <span style={{ color: '#6B7280', fontSize: 11, minWidth: 40 }}>{d.percentage}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Site Table */}
       <div className="section-card">
-        <h3>C&I Sites</h3>
+        <h3>C&I Sites with Severity</h3>
         <SiteTable sites={sites.filter((s) => s.severity !== null)} onSiteClick={(id) => nav(`/site/${id}`)} />
       </div>
     </div>
@@ -407,7 +418,8 @@ function SiteHealthPage() {
       )}
       <div className="chart-grid">
         <div className="section-card">
-          <h3>Status Distribution<span className="demo-label">DEMO</span></h3>
+          <h3>Status Distribution<span className="demo-label">MOCK</span></h3>
+          <p className="section-subtitle">Counts derived from mock data</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={statusData} layout="vertical" margin={{ left: 60 }}>
               <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -452,21 +464,23 @@ function OpenCasesPage() {
 
   return (
     <div className="page-content">
-      <h2 className="page-title">Open Cases</h2>
-      <div className="kpi-row">
-        <KpiCard label="Sites with Open Cases" value={openCaseSites.length} className="sev1" primary />
-        <KpiCard label="Severity Sites without Open Cases" value={noOpenCaseSites.length} className="sev4" />
+      <h2 className="page-title">Open Cases — Site-Level View</h2>
+      <p className="page-description">This page shows <strong>sites</strong> grouped by whether they have open SFDC cases. For individual case records, see <span className="site-link" onClick={() => nav('/case-tracker')}>Case Tracker</span>.</p>
+
+      <div className="kpi-row" style={{ marginTop: 12 }}>
+        <KpiCard label="Sites with SFDC Open Cases" value={openCaseSites.length} className="sev1" primary />
+        <KpiCard label="Severity Sites — No Open Cases" value={noOpenCaseSites.length} className="sev4" primary />
       </div>
 
       <div className="section-card">
         <h3>C&I Sites & SFDC OPEN Cases Only</h3>
-        <p className="section-subtitle">Sites that have at least one open SFDC case (site-level view)</p>
+        <p className="section-subtitle">Each row is a <strong>site</strong> (not a case). These {openCaseSites.length} sites have at least one open SFDC case.</p>
         <SiteTable sites={openCaseSites} onSiteClick={(id) => nav(`/site/${id}`)} />
       </div>
 
       <div className="section-card">
         <h3>C&I Sites & SFDC NO OPEN Cases</h3>
-        <p className="section-subtitle">Severity sites without open cases — potential action list for proactive case creation</p>
+        <p className="section-subtitle">Severity sites with no open SFDC cases. These {noOpenCaseSites.length} sites may need proactive case creation.</p>
         <SiteTable sites={noOpenCaseSites} onSiteClick={(id) => nav(`/site/${id}`)} />
       </div>
     </div>
@@ -496,9 +510,10 @@ function CaseTrackerPage() {
 
   return (
     <div className="page-content">
-      <h2 className="page-title">Case Tracker</h2>
-      <div className="kpi-row">
-        <KpiCard label="Total Cases" value={cases.length} primary />
+      <h2 className="page-title">Case Tracker — Case-Level Records</h2>
+      <p className="page-description">Each row is an individual <strong>SFDC case</strong>. For site-level grouping, see <span className="site-link" onClick={() => nav('/open-cases')}>Open Cases</span>.</p>
+      <div className="kpi-row" style={{ marginTop: 12 }}>
+        <KpiCard label="Total Case Records" value={cases.length} primary />
       </div>
       <div className="section-card">
         <h3>C&I Sites Case Tracker</h3>
@@ -559,16 +574,21 @@ function HistoricalTrendsPage() {
   const [historicalData, setHistoricalData] = useState<HistoricalSeverity[]>([]);
   const [selectedInstaller, setSelectedInstaller] = useState<string>('');
   const [installers, setInstallers] = useState<string[]>([]);
+  const [allDates, setAllDates] = useState<string[]>([]);
+  const [tableDatePage, setTableDatePage] = useState(0);
+  const DATES_PER_PAGE = 7;
 
   useEffect(() => {
     dataProvider.getHistoricalSeverity().then((data) => {
       setHistoricalData(data);
       const ins = [...new Set(data.map((d) => d.installer))].sort();
       setInstallers(ins);
+      const dates = [...new Set(data.map((d) => d.date))].sort();
+      setAllDates(dates);
+      setTableDatePage(Math.max(0, Math.ceil(dates.length / DATES_PER_PAGE) - 1));
     });
   }, []);
 
-  // Aggregate by date for trend chart
   const trendData = useMemo(() => {
     const filtered = selectedInstaller ? historicalData.filter((d) => d.installer === selectedInstaller) : historicalData;
     const byDate: Record<string, { sev1: number; sev2: number; sev3: number; total: number }> = {};
@@ -581,37 +601,57 @@ function HistoricalTrendsPage() {
     });
     return Object.entries(byDate)
       .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-60) // show last 60 data points for readability
+      .slice(-90)
       .map(([date, vals]) => ({ date: date.slice(5), ...vals }));
   }, [historicalData, selectedInstaller]);
 
-  // Table data: last 7 dates
-  const tableData = useMemo(() => {
-    const dates = [...new Set(historicalData.map((d) => d.date))].sort().slice(-7);
-    const installerMap: Record<string, Record<string, { sev1: number; sev2: number; sev3: number; total: number }>> = {};
-    historicalData.filter((d) => dates.includes(d.date)).forEach((d) => {
-      if (!installerMap[d.installer]) installerMap[d.installer] = {};
-      installerMap[d.installer][d.date] = { sev1: d.sev1, sev2: d.sev2, sev3: d.sev3, total: d.total };
+  const tableDates = useMemo(() => {
+    const start = tableDatePage * DATES_PER_PAGE;
+    return allDates.slice(start, start + DATES_PER_PAGE);
+  }, [allDates, tableDatePage]);
+
+  const totalDatePages = Math.ceil(allDates.length / DATES_PER_PAGE);
+
+  const tableInstallers = useMemo(() => {
+    const filtered = selectedInstaller
+      ? historicalData.filter((d) => d.installer === selectedInstaller && tableDates.includes(d.date))
+      : historicalData.filter((d) => tableDates.includes(d.date));
+    const map: Record<string, Record<string, { sev1: number; sev2: number; sev3: number; total: number }>> = {};
+    filtered.forEach((d) => {
+      if (!map[d.installer]) map[d.installer] = {};
+      map[d.installer][d.date] = { sev1: d.sev1, sev2: d.sev2, sev3: d.sev3, total: d.total };
     });
-    return { dates, installerMap };
-  }, [historicalData]);
+    return map;
+  }, [historicalData, tableDates, selectedInstaller]);
+
+  const totalRow = useMemo(() => {
+    const totals: Record<string, { sev1: number; sev2: number; sev3: number; total: number }> = {};
+    tableDates.forEach((d) => { totals[d] = { sev1: 0, sev2: 0, sev3: 0, total: 0 }; });
+    Object.values(tableInstallers).forEach((dates) => {
+      tableDates.forEach((d) => {
+        const v = dates[d];
+        if (v) { totals[d].sev1 += v.sev1; totals[d].sev2 += v.sev2; totals[d].sev3 += v.sev3; totals[d].total += v.total; }
+      });
+    });
+    return totals;
+  }, [tableInstallers, tableDates]);
 
   return (
     <div className="page-content">
       <h2 className="page-title">Historical Trends</h2>
-      <p style={{ fontSize: 11, color: '#6B7280', marginBottom: 12 }}>Data saved since 2025-05-27. Does NOT include Sev-4.</p>
+      <p className="page-description">Historical Data per Installer (saved since 2025-05-27). Does <strong>not</strong> include Sev-4.</p>
 
       <div className="section-card">
         <h3>Severity Trend</h3>
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <select className="filter-select" value={selectedInstaller} onChange={(e) => setSelectedInstaller(e.target.value)}>
-            <option value="">All Installers</option>
+            <option value="">All Installers ({installers.length})</option>
             {installers.map((ins) => <option key={ins} value={ins}>{ins}</option>)}
           </select>
         </div>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={trendData}>
-            <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} />
+            <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={Math.max(1, Math.floor(trendData.length / 15))} />
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip />
             <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
@@ -624,33 +664,45 @@ function HistoricalTrendsPage() {
       </div>
 
       <div className="section-card">
-        <h3>Historical Data per Installer</h3>
-        <div className="table-wrapper" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <h3>Historical Data per Installer<span className="demo-label">MOCK</span></h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#6B7280' }}>
+            {allDates.length} date(s) total &middot; {Object.keys(tableInstallers).length} installer(s) &middot; Showing dates {tableDatePage * DATES_PER_PAGE + 1}–{Math.min((tableDatePage + 1) * DATES_PER_PAGE, allDates.length)} of {allDates.length}
+          </span>
+          <div className="pagination">
+            <button disabled={tableDatePage === 0} onClick={() => setTableDatePage(0)}>First</button>
+            <button disabled={tableDatePage === 0} onClick={() => setTableDatePage(tableDatePage - 1)}>Prev</button>
+            <span>{tableDatePage + 1} / {totalDatePages || 1}</span>
+            <button disabled={tableDatePage >= totalDatePages - 1} onClick={() => setTableDatePage(tableDatePage + 1)}>Next</button>
+            <button disabled={tableDatePage >= totalDatePages - 1} onClick={() => setTableDatePage(totalDatePages - 1)}>Last</button>
+          </div>
+        </div>
+        <div className="table-wrapper" style={{ maxHeight: '500px', overflowY: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ position: 'sticky', left: 0, zIndex: 2, background: '#1F2937' }}>Installer</th>
-                {tableData.dates.map((d) => (
+                <th style={{ position: 'sticky', left: 0, zIndex: 2, background: '#1F2937', minWidth: 180 }}>Installer</th>
+                {tableDates.map((d) => (
                   <th key={d} colSpan={4} style={{ textAlign: 'center', borderLeft: '2px solid #374151' }}>{d}</th>
                 ))}
               </tr>
               <tr>
-                <th style={{ position: 'sticky', left: 0, zIndex: 2, background: '#1F2937' }} />
-                {tableData.dates.map((d) => (
+                <th style={{ position: 'sticky', left: 0, zIndex: 2, background: '#1F2937', minWidth: 180 }} />
+                {tableDates.map((d) => (
                   <React.Fragment key={`sub-${d}`}>
-                    <th style={{ fontSize: 10 }}>S1</th>
-                    <th style={{ fontSize: 10 }}>S2</th>
-                    <th style={{ fontSize: 10 }}>S3</th>
-                    <th style={{ fontSize: 10, borderRight: '1px solid #374151' }}>Tot</th>
+                    <th style={{ fontSize: 10 }}>Sev-1</th>
+                    <th style={{ fontSize: 10 }}>Sev-2</th>
+                    <th style={{ fontSize: 10 }}>Sev-3</th>
+                    <th style={{ fontSize: 10, borderRight: '1px solid #374151' }}>Total</th>
                   </React.Fragment>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {Object.entries(tableData.installerMap).slice(0, 30).map(([installer, dates]) => (
+              {Object.entries(tableInstallers).map(([installer, dates]) => (
                 <tr key={installer}>
-                  <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 500, zIndex: 1 }}>{installer}</td>
-                  {tableData.dates.map((d) => {
+                  <td style={{ position: 'sticky', left: 0, background: '#fff', fontWeight: 500, zIndex: 1, minWidth: 180 }}>{installer}</td>
+                  {tableDates.map((d) => {
                     const v = dates[d] ?? { sev1: 0, sev2: 0, sev3: 0, total: 0 };
                     return (
                       <React.Fragment key={d}>
@@ -663,11 +715,30 @@ function HistoricalTrendsPage() {
                   })}
                 </tr>
               ))}
+              <tr style={{ borderTop: '2px solid #1F2937', fontWeight: 700, background: '#F3F4F6' }}>
+                <td style={{ position: 'sticky', left: 0, background: '#F3F4F6', fontWeight: 700, zIndex: 1, minWidth: 180 }}>TOTAL</td>
+                {tableDates.map((d) => {
+                  const v = totalRow[d] ?? { sev1: 0, sev2: 0, sev3: 0, total: 0 };
+                  return (
+                    <React.Fragment key={`tot-${d}`}>
+                      <td>{v.sev1}</td>
+                      <td>{v.sev2}</td>
+                      <td>{v.sev3}</td>
+                      <td style={{ borderRight: '1px solid #E5E7EB' }}>{v.total}</td>
+                    </React.Fragment>
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>
         <div className="table-footer">
-          <span>Displaying {Object.keys(tableData.installerMap).length} installer(s) × {tableData.dates.length} date(s)</span>
+          <span>Displaying {Object.keys(tableInstallers).length} installer(s) × {tableDates.length} date(s)</span>
+          <div className="pagination">
+            <button disabled={tableDatePage === 0} onClick={() => setTableDatePage(tableDatePage - 1)}>← Older dates</button>
+            <span>Page {tableDatePage + 1} of {totalDatePages || 1}</span>
+            <button disabled={tableDatePage >= totalDatePages - 1} onClick={() => setTableDatePage(tableDatePage + 1)}>Newer dates →</button>
+          </div>
         </div>
       </div>
     </div>

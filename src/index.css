@@ -212,6 +212,19 @@ html, body, #root {
   color: var(--text-primary);
 }
 
+/* ---- KPI GROUP (hierarchy) ---- */
+.kpi-group {
+  margin-bottom: 12px;
+}
+.kpi-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
 /* ---- KPI CARDS ---- */
 .kpi-row {
   display: flex;
@@ -219,10 +232,17 @@ html, body, #root {
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
+.kpi-row-compact .kpi-card {
+  padding: 10px 14px;
+  min-width: 100px;
+}
+.kpi-row-compact .kpi-card .kpi-value {
+  font-size: 20px;
+}
 .kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 14px 16px;
   min-width: 130px;
   flex: 1;
@@ -428,23 +448,104 @@ html, body, #root {
 }
 .back-link:hover { text-decoration: underline; }
 
-/* ---- DEMO LABEL ---- */
+/* ---- DEMO / MOCK LABEL ---- */
 .demo-label {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 2px 8px;
   background: #FEF3C7;
   color: #92400E;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 3px;
   margin-left: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border: 1px solid #F59E0B;
+}
+
+/* ---- PAGE DESCRIPTION ---- */
+.page-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: -12px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.page-description .site-link {
+  color: var(--orange);
+  cursor: pointer;
+  font-weight: 500;
+}
+.page-description .site-link:hover { text-decoration: underline; }
+
+/* ---- SEVERITY BREAKDOWN ---- */
+.sev-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.sev-breakdown-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+.sev-breakdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sev-breakdown-total {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.sev-breakdown-subs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.sev-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.sev-sub strong {
+  color: var(--text-primary);
+  font-size: 16px;
+  display: block;
+}
+.sev-sub small {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.sev-breakdown-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.sev-breakdown-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.sev-breakdown-legend {
+  display: flex;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }
 
 /* ---- RESPONSIVE ---- */
+@media (max-width: 1600px) {
+  .sev-breakdown-grid { grid-template-columns: repeat(4, 1fr); }
+}
 @media (max-width: 1440px) {
   .chart-grid { grid-template-columns: 1fr 1fr; }
+  .sev-breakdown-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 1366px) {
   .sidebar { width: var(--sidebar-collapsed); }
@@ -454,8 +555,14 @@ html, body, #root {
   .sidebar-nav a { justify-content: center; padding: 12px 8px; }
   .chart-grid { grid-template-columns: 1fr; }
   .kpi-card { min-width: 110px; }
+  .sev-breakdown-grid { grid-template-columns: repeat(2, 1fr); }
+  .filter-bar { flex-wrap: wrap; height: auto; min-height: var(--filter-height); padding: 6px 20px; }
 }
 @media (max-width: 1280px) {
   .kpi-card .kpi-value { font-size: 22px; }
+  .kpi-row-compact .kpi-card .kpi-value { font-size: 18px; }
   .page-content { padding: 14px; }
+  .sev-breakdown-grid { grid-template-columns: 1fr 1fr; }
+  .sev-breakdown-total { font-size: 20px; }
+  .sev-sub strong { font-size: 14px; }
 }
