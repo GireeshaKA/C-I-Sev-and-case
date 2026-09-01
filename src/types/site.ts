@@ -1,12 +1,22 @@
-export type SeverityLevel = 'S0' | 'S1' | 'S2' | 'S3' | 'S4' | 'No Severity';
+export type SeverityLevel = 1 | 2 | 3 | 4 | null;
 
-export type SiteStage = 'Active' | 'Inactive' | 'Decommissioned' | 'Pending';
+export type SeveritySubcategory = 'a' | 'b' | 'c';
 
-export type SiteStatus = 'Normal' | 'Warning' | 'Critical' | 'Offline' | 'Unknown';
+export type SiteStage = 'Ready' | 'Final' | 'Verifying';
 
-export type ConnectionType = 'Ethernet' | 'WiFi' | 'Cellular' | 'Unknown';
+export type SiteStatus =
+  | 'Normal'
+  | 'Production Issue'
+  | 'Microinverters Not Reporting'
+  | 'Envoy Not Reporting'
+  | 'Meter Issue';
 
-export type EnvoyType = 'IQ Gateway' | 'IQ Gateway Commercial' | 'Envoy-S' | 'Unknown';
+export type ConnectionType = 'Ethernet' | 'Wifi' | 'Cellular';
+
+export type EnvoyType =
+  | 'IQD Commercial Gateway'
+  | 'IQ Gateway Commercial'
+  | 'IQ Gateway Commercial Si';
 
 export interface Site {
   siteId: string;
@@ -23,6 +33,8 @@ export interface Site {
   country: string;
   connectionType: ConnectionType;
   severity: SeverityLevel;
-  systemSize: number;
-  activationDate: string;
+  severitySubcategory: SeveritySubcategory | null;
+  invProduced: string;
+  invParamBld: string;
+  hasOpenCase: boolean;
 }

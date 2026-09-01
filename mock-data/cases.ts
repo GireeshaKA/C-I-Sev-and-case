@@ -1,174 +1,42 @@
-import type { SfdcCase } from '../src/types';
+import type { SfdcCase, CaseStatus, CaseCategory, CaseType } from '../src/types';
+import { mockSites } from './sites';
 
-export const mockCases: SfdcCase[] = [
-  {
-    caseNumber: 'CS-100001',
-    caseStatus: 'Open',
-    severity: 'S0',
-    caseCategory: 'Communication',
-    caseType: 'Proactive',
-    siteId: 'SITE-003',
-    siteName: 'Portland Warehouse District',
-    subject: 'Complete communication loss — all envoys offline',
-    description: 'All 10 envoys have stopped reporting. Last communication was 5 days ago.',
-    createdDate: '2024-07-10T08:30:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T14:00:00Z',
-    owner: 'Tier 3 Support',
-    age: 5,
-    priority: 'Critical',
-  },
-  {
-    caseNumber: 'CS-100002',
-    caseStatus: 'Open',
-    severity: 'S1',
-    caseCategory: 'Performance',
-    caseType: 'Proactive',
-    siteId: 'SITE-007',
-    siteName: 'Phoenix Tech Campus',
-    subject: 'Significant production drop — 60% below expected',
-    description: 'Site production has dropped significantly. Multiple microinverters not reporting.',
-    createdDate: '2024-07-12T10:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T09:30:00Z',
-    owner: 'Tier 2 Support',
-    age: 3,
-    priority: 'High',
-  },
-  {
-    caseNumber: 'CS-100003',
-    caseStatus: 'Open',
-    severity: 'S2',
-    caseCategory: 'Performance',
-    caseType: 'Proactive',
-    siteId: 'SITE-002',
-    siteName: 'Austin Office Complex',
-    subject: 'Moderate production underperformance',
-    description: 'Site producing 25% below expected. Several microinverters intermittent.',
-    createdDate: '2024-07-08T14:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-14T16:00:00Z',
-    owner: 'Tier 1 Support',
-    age: 7,
-    priority: 'Medium',
-  },
-  {
-    caseNumber: 'CS-100004',
-    caseStatus: 'Open',
-    severity: 'S2',
-    caseCategory: 'Hardware',
-    caseType: 'Reactive',
-    siteId: 'SITE-009',
-    siteName: 'New York Commercial Tower',
-    subject: 'Multiple inverter faults detected',
-    description: 'Three microinverters reporting DC voltage faults.',
-    createdDate: '2024-07-13T11:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T08:00:00Z',
-    owner: 'Tier 2 Support',
-    age: 2,
-    priority: 'Medium',
-  },
-  {
-    caseNumber: 'CS-100005',
-    caseStatus: 'Open',
-    severity: 'S3',
-    caseCategory: 'Communication',
-    caseType: 'Proactive',
-    siteId: 'SITE-005',
-    siteName: 'Miami Retail Center',
-    subject: 'Intermittent envoy communication',
-    description: 'Two envoys intermittently losing cellular connection.',
-    createdDate: '2024-07-11T09:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T12:00:00Z',
-    owner: 'Tier 1 Support',
-    age: 4,
-    priority: 'Low',
-  },
-  {
-    caseNumber: 'CS-100006',
-    caseStatus: 'Open',
-    severity: 'S1',
-    caseCategory: 'Communication',
-    caseType: 'Proactive',
-    siteId: 'SITE-010',
-    siteName: 'Atlanta Logistics Center',
-    subject: 'Site offline — no communication for 15 days',
-    description: 'Site has been offline since June 30. No envoy communication.',
-    createdDate: '2024-07-01T08:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T10:00:00Z',
-    owner: 'Tier 3 Support',
-    age: 14,
-    priority: 'High',
-  },
-  {
-    caseNumber: 'CS-100007',
-    caseStatus: 'Closed',
-    severity: 'S4',
-    caseCategory: 'Software',
-    caseType: 'Reactive',
-    siteId: 'SITE-001',
-    siteName: 'Sunnyvale Commercial Plaza',
-    subject: 'Firmware update required',
-    description: 'Envoys running outdated firmware. Scheduled update completed.',
-    createdDate: '2024-06-20T10:00:00Z',
-    closedDate: '2024-07-01T15:00:00Z',
-    lastModifiedDate: '2024-07-01T15:00:00Z',
-    owner: 'Tier 1 Support',
-    age: 11,
-    priority: 'Low',
-  },
-  {
-    caseNumber: 'CS-100008',
-    caseStatus: 'Closed',
-    severity: 'S3',
-    caseCategory: 'Grid',
-    caseType: 'Customer Initiated',
-    siteId: 'SITE-004',
-    siteName: 'Denver Industrial Park',
-    subject: 'Grid voltage fluctuation investigation',
-    description: 'Customer reported intermittent grid issues. Investigation completed.',
-    createdDate: '2024-06-25T13:00:00Z',
-    closedDate: '2024-07-05T17:00:00Z',
-    lastModifiedDate: '2024-07-05T17:00:00Z',
-    owner: 'Tier 2 Support',
-    age: 10,
-    priority: 'Medium',
-  },
-  {
-    caseNumber: 'CS-100009',
-    caseStatus: 'Open',
-    severity: 'S4',
-    caseCategory: 'Performance',
-    caseType: 'Proactive',
-    siteId: 'SITE-006',
-    siteName: 'Chicago Distribution Hub',
-    subject: 'Minor production variance detected',
-    description: 'Site producing 5% below expected. Monitoring.',
-    createdDate: '2024-07-14T08:00:00Z',
-    closedDate: null,
-    lastModifiedDate: '2024-07-15T08:00:00Z',
-    owner: 'Tier 1 Support',
-    age: 1,
-    priority: 'Low',
-  },
-  {
-    caseNumber: 'CS-100010',
-    caseStatus: 'Closed',
-    severity: 'S2',
-    caseCategory: 'Hardware',
-    caseType: 'Reactive',
-    siteId: 'SITE-008',
-    siteName: 'Seattle Innovation Center',
-    subject: 'Single inverter replacement',
-    description: 'One microinverter replaced under warranty.',
-    createdDate: '2024-06-10T09:00:00Z',
-    closedDate: '2024-06-28T14:00:00Z',
-    lastModifiedDate: '2024-06-28T14:00:00Z',
-    owner: 'Tier 1 Support',
-    age: 18,
-    priority: 'Medium',
-  },
-];
+const CASE_CATEGORIES: CaseCategory[] = ['Microinverter', 'Envoy', 'Meter', 'Other'];
+const CASE_TYPES: CaseType[] = ['MI. Drop Out', 'MI. AC Branch Issue', 'MI. Low Power', 'Envoy. Not Reporting', 'Meter. Issue'];
+
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+const rand = seededRandom(99);
+function pick<T>(arr: T[]): T { return arr[Math.floor(rand() * arr.length)]; }
+
+function generateCases(): SfdcCase[] {
+  const cases: SfdcCase[] = [];
+  const sitesWithCases = mockSites.filter(s => s.hasOpenCase);
+
+  for (const site of sitesWithCases) {
+    const numCases = Math.floor(rand() * 2) + 1;
+    for (let i = 0; i < numCases; i++) {
+      const sub = site.severitySubcategory ?? 'b';
+      const caseStatus: CaseStatus = sub === 'a' ? 'New' : 'Case - In Progress';
+      cases.push({
+        caseNumber: String(19000000 + Math.floor(rand() * 2000000)),
+        siteId: site.siteId,
+        siteLink: site.siteId,
+        siteName: site.siteName,
+        siteStatus: site.siteStatus,
+        lastIntervalEndDate: site.lastIntervalEndDate,
+        miProductSku: site.miProductSku,
+        connectionType: site.connectionType,
+        caseStatus,
+        severity: `${site.severity}(${sub})`,
+        caseCategory: pick(CASE_CATEGORIES),
+        caseType: pick(CASE_TYPES),
+      });
+    }
+  }
+  return cases;
+}
+
+export const mockCases: SfdcCase[] = generateCases();

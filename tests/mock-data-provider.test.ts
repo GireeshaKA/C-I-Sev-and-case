@@ -10,25 +10,27 @@ describe('MockDataProvider', () => {
   });
 
   describe('getSites', () => {
-    it('should return all sites when no filters applied', async () => {
+    it('should return all 2060 sites when no filters applied', async () => {
       const sites = await provider.getSites();
-      expect(sites.length).toBeGreaterThan(0);
+      expect(sites.length).toBe(2060);
     });
 
     it('should filter sites by severity', async () => {
-      const sites = await provider.getSites({ severity: ['S0'] });
-      expect(sites.every((s) => s.severity === 'S0')).toBe(true);
+      const sites = await provider.getSites({ severity: [1] });
+      expect(sites.length).toBe(139);
+      expect(sites.every((s) => s.severity === 1)).toBe(true);
     });
 
-    it('should filter sites by site status', async () => {
-      const sites = await provider.getSites({ siteStatus: ['Normal'] });
-      expect(sites.every((s) => s.siteStatus === 'Normal')).toBe(true);
+    it('should filter sites by connection type', async () => {
+      const sites = await provider.getSites({ connectionType: ['Ethernet'] });
+      expect(sites.every((s) => s.connectionType === 'Ethernet')).toBe(true);
+      expect(sites.length).toBeGreaterThan(0);
     });
 
     it('should filter sites by search term', async () => {
-      const sites = await provider.getSites({ searchTerm: 'Portland' });
-      expect(sites.length).toBe(1);
-      expect(sites[0].siteName).toContain('Portland');
+      const sites = await provider.getSites({ searchTerm: 'Derek' });
+      expect(sites.length).toBeGreaterThan(0);
+      expect(sites[0].siteName).toContain('Derek');
     });
 
     it('should return empty array for non-matching filters', async () => {
@@ -39,9 +41,11 @@ describe('MockDataProvider', () => {
 
   describe('getSiteById', () => {
     it('should return a site by ID', async () => {
-      const site = await provider.getSiteById('SITE-001');
+      const allSites = await provider.getSites();
+      const firstId = allSites[0].siteId;
+      const site = await provider.getSiteById(firstId);
       expect(site).not.toBeNull();
-      expect(site!.siteId).toBe('SITE-001');
+      expect(site!.siteId).toBe(firstId);
     });
 
     it('should return null for non-existent site', async () => {
@@ -51,35 +55,43 @@ describe('MockDataProvider', () => {
   });
 
   describe('getCases', () => {
-    it('should return all cases when no filters applied', async () => {
+    it('should return cases when no filters applied', async () => {
       const cases = await provider.getCases();
       expect(cases.length).toBeGreaterThan(0);
     });
 
-    it('should filter cases by status', async () => {
-      const cases = await provider.getCases({ caseStatus: ['Open'] });
-      expect(cases.every((c) => c.caseStatus === 'Open')).toBe(true);
+    it('should have composite severity format', async () => {
+      const cases = await provider.getCases();
+      expect(cases[0].severity).toMatch(/^\d\([abc]\)$/);
     });
 
-    it('should filter cases by category', async () => {
-      const cases = await provider.getCases({ caseCategory: ['Communication'] });
-      expect(cases.every((c) => c.caseCategory === 'Communication')).toBe(true);
+    it('should filter cases by search term', async () => {
+      const cases = await provider.getCases();
+      const firstSiteId = cases[0].siteId;
+      const filtered = await provider.getCases({ searchTerm: firstSiteId });
+      expect(filtered.length).toBeGreaterThan(0);
+      expect(filtered.every((c) => c.siteId === firstSiteId)).toBe(true);
     });
   });
 
   describe('getCasesBySiteId', () => {
-    it('should return cases for a specific site', async () => {
-      const cases = await provider.getCasesBySiteId('SITE-003');
+    it('should return cases for a site with open cases', async () => {
+      const sites = await provider.getSites();
+      const openCaseSite = sites.find((s) => s.hasOpenCase);
+      expect(openCaseSite).toBeDefined();
+      const cases = await provider.getCasesBySiteId(openCaseSite!.siteId);
       expect(cases.length).toBeGreaterThan(0);
-      expect(cases.every((c) => c.siteId === 'SITE-003')).toBe(true);
+      expect(cases.every((c) => c.siteId === openCaseSite!.siteId)).toBe(true);
     });
   });
 
   describe('getCaseByNumber', () => {
     it('should return a case by number', async () => {
-      const sfdcCase = await provider.getCaseByNumber('CS-100001');
+      const allCases = await provider.getCases();
+      const firstNumber = allCases[0].caseNumber;
+      const sfdcCase = await provider.getCaseByNumber(firstNumber);
       expect(sfdcCase).not.toBeNull();
-      expect(sfdcCase!.caseNumber).toBe('CS-100001');
+      expect(sfdcCase!.caseNumber).toBe(firstNumber);
     });
 
     it('should return null for non-existent case', async () => {
@@ -89,42 +101,66 @@ describe('MockDataProvider', () => {
   });
 
   describe('getSeverityDistribution', () => {
-    it('should return severity distribution', async () => {
+    it('should return distribution for severity levels 1-4', async () => {
       const distribution = await provider.getSeverityDistribution();
-      expect(distribution.length).toBeGreaterThan(0);
-      const totalPercentage = distribution.reduce((sum, d) => sum + d.percentage, 0);
-      expect(totalPercentage).toBeGreaterThanOrEqual(95);
-      expect(totalPercentage).toBeLessThanOrEqual(105);
+      expect(distribution).toHaveLength(4);
+      expect(distribution.map((d) => d.level)).toEqual([1, 2, 3, 4]);
+    });
+
+    it('should include subcategory breakdowns', async () => {
+      const distribution = await provider.getSeverityDistribution();
+      const sev1 = distribution.find((d) => d.level === 1)!;
+      expect(sev1.subcategoryA).toBe(13);
+      expect(sev1.subcategoryB).toBe(121);
+      expect(sev1.subcategoryC).toBe(5);
     });
   });
 
   describe('getHistoricalSeverity', () => {
-    it('should return historical severity data', async () => {
+    it('should return historical severity data with correct fields', async () => {
       const history = await provider.getHistoricalSeverity();
       expect(history.length).toBeGreaterThan(0);
       expect(history[0]).toHaveProperty('date');
-      expect(history[0]).toHaveProperty('s0');
+      expect(history[0]).toHaveProperty('installer');
+      expect(history[0]).toHaveProperty('sev1');
+      expect(history[0]).toHaveProperty('sev2');
+      expect(history[0]).toHaveProperty('sev3');
       expect(history[0]).toHaveProperty('total');
+    });
+
+    it('should not have sev4 or s0 fields', async () => {
+      const history = await provider.getHistoricalSeverity();
+      expect(history[0]).not.toHaveProperty('s0');
+      expect(history[0]).not.toHaveProperty('sev4');
     });
   });
 
   describe('getKpis', () => {
-    it('should return dashboard KPIs', async () => {
+    it('should return Phase 1 confirmed KPIs', async () => {
       const kpis = await provider.getKpis();
-      expect(kpis.totalSites.value).toBeGreaterThan(0);
-      expect(kpis.totalOpenCases).toBeDefined();
-      expect(kpis.criticalSeverity).toBeDefined();
+      expect(kpis.totalSites.value).toBe(2060);
+      expect(kpis.countSev123).toBeDefined();
+      expect(kpis.pctSev123).toBeDefined();
+      expect(kpis.sev123a).toBeDefined();
+      expect(kpis.sev123b).toBeDefined();
+      expect(kpis.sev123c).toBeDefined();
+      expect(kpis.pctSev4).toBeDefined();
+      expect(kpis.countSev4).toBeDefined();
       expect(kpis.sitesWithOpenCases).toBeDefined();
       expect(kpis.sitesWithNoOpenCases).toBeDefined();
-      expect(kpis.averageCaseAge).toBeDefined();
     });
   });
 
   describe('getFilterOptions', () => {
-    it('should return state options', async () => {
-      const states = await provider.getFilterOptions('state');
-      expect(states.length).toBeGreaterThan(0);
-      expect(states).toEqual([...states].sort());
+    it('should return connection type options', async () => {
+      const options = await provider.getFilterOptions('connectionType');
+      expect(options.length).toBeGreaterThan(0);
+      expect(options).toEqual([...options].sort());
+    });
+
+    it('should return SKU options', async () => {
+      const options = await provider.getFilterOptions('miProductSku');
+      expect(options.length).toBeGreaterThan(0);
     });
 
     it('should return empty array for unknown field', async () => {

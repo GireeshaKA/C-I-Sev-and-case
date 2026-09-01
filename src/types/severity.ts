@@ -4,15 +4,16 @@ export interface SeverityDistribution {
   level: SeverityLevel;
   count: number;
   percentage: number;
+  subcategoryA: number;
+  subcategoryB: number;
+  subcategoryC: number;
 }
 
 export interface HistoricalSeverity {
   date: string;
-  s0: number;
-  s1: number;
-  s2: number;
-  s3: number;
-  s4: number;
-  noSeverity: number;
+  installer: string;
+  sev1: number;
+  sev2: number;
+  sev3: number;
   total: number;
 }

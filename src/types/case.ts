@@ -1,23 +1,25 @@
-export type CaseStatus = 'Open' | 'Closed' | 'Escalated' | 'In Progress' | 'Pending';
+export type CaseStatus = 'New' | 'Case - In Progress';
 
-export type CaseCategory = 'Performance' | 'Communication' | 'Hardware' | 'Software' | 'Grid' | 'Other';
+export type CaseCategory = 'Microinverter' | 'Envoy' | 'Meter' | 'Other';
 
-export type CaseType = 'Reactive' | 'Proactive' | 'Customer Initiated';
+export type CaseType =
+  | 'MI. Drop Out'
+  | 'MI. AC Branch Issue'
+  | 'MI. Low Power'
+  | 'Envoy. Not Reporting'
+  | 'Meter. Issue';
 
 export interface SfdcCase {
   caseNumber: string;
+  siteId: string;
+  siteLink: string;
+  siteName: string;
+  siteStatus: string;
+  lastIntervalEndDate: string;
+  miProductSku: string;
+  connectionType: string;
   caseStatus: CaseStatus;
   severity: string;
   caseCategory: CaseCategory;
   caseType: CaseType;
-  siteId: string;
-  siteName: string;
-  subject: string;
-  description: string;
-  createdDate: string;
-  closedDate: string | null;
-  lastModifiedDate: string;
-  owner: string;
-  age: number;
-  priority: string;
 }

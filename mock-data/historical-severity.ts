@@ -1,18 +1,42 @@
 import type { HistoricalSeverity } from '../src/types';
 
-export const mockHistoricalSeverity: HistoricalSeverity[] = [
-  { date: '2024-01-01', s0: 2, s1: 5, s2: 12, s3: 18, s4: 8, noSeverity: 55, total: 100 },
-  { date: '2024-01-15', s0: 1, s1: 4, s2: 10, s3: 20, s4: 10, noSeverity: 55, total: 100 },
-  { date: '2024-02-01', s0: 3, s1: 6, s2: 14, s3: 16, s4: 7, noSeverity: 54, total: 100 },
-  { date: '2024-02-15', s0: 2, s1: 5, s2: 11, s3: 19, s4: 9, noSeverity: 54, total: 100 },
-  { date: '2024-03-01', s0: 1, s1: 3, s2: 9, s3: 15, s4: 12, noSeverity: 60, total: 100 },
-  { date: '2024-03-15', s0: 2, s1: 4, s2: 13, s3: 17, s4: 8, noSeverity: 56, total: 100 },
-  { date: '2024-04-01', s0: 1, s1: 3, s2: 8, s3: 14, s4: 10, noSeverity: 64, total: 100 },
-  { date: '2024-04-15', s0: 0, s1: 2, s2: 7, s3: 16, s4: 11, noSeverity: 64, total: 100 },
-  { date: '2024-05-01', s0: 1, s1: 4, s2: 10, s3: 13, s4: 9, noSeverity: 63, total: 100 },
-  { date: '2024-05-15', s0: 2, s1: 5, s2: 12, s3: 15, s4: 8, noSeverity: 58, total: 100 },
-  { date: '2024-06-01', s0: 1, s1: 3, s2: 9, s3: 18, s4: 7, noSeverity: 62, total: 100 },
-  { date: '2024-06-15', s0: 2, s1: 4, s2: 11, s3: 16, s4: 10, noSeverity: 57, total: 100 },
-  { date: '2024-07-01', s0: 1, s1: 3, s2: 10, s3: 14, s4: 9, noSeverity: 63, total: 100 },
-  { date: '2024-07-15', s0: 1, s1: 2, s2: 8, s3: 12, s4: 6, noSeverity: 71, total: 100 },
+const INSTALLERS = [
+  'Solar and Wind Power LLC', 'Ecovolts', 'Vancouver Renewable Energy Cooperative',
+  'GVC Electrical Service', 'Atlanta Solar Center', 'Division 16 Corporation',
+  'Sumner Solar Inc', 'Phase Two', 'Royal Alle Heating AC Solar',
+  'Eccocentre Solar', 'Flywheel Development LLC', 'Solar Power NW LLC',
+  'Holsen Home Automation Solar', 'Halo Solar LLC', 'Palomar Solar and Roofing',
+  'SunTech Pro Installers', 'Green Energy Solutions', 'Pacific Solar Group',
+  'Mountain Electric Co', 'Valley Solar Partners',
 ];
+
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function generateHistorical(): HistoricalSeverity[] {
+  const rand = seededRandom(123);
+  const data: HistoricalSeverity[] = [];
+  const startDate = new Date('2025-05-27');
+  const endDate = new Date('2026-09-01');
+
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() === 0) continue; // skip Sundays
+    const dateStr = d.toISOString().slice(0, 10);
+    for (const installer of INSTALLERS) {
+      const sev1 = Math.floor(rand() * 8);
+      const sev2 = Math.floor(rand() * 5);
+      const sev3 = Math.floor(rand() * 10);
+      data.push({
+        date: dateStr,
+        installer,
+        sev1, sev2, sev3,
+        total: sev1 + sev2 + sev3,
+      });
+    }
+  }
+  return data;
+}
+
+export const mockHistoricalSeverity: HistoricalSeverity[] = generateHistorical();

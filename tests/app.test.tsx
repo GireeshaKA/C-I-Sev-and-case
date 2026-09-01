@@ -13,8 +13,8 @@ describe('App', () => {
     expect(screen.getByText(/Unified Site Health/i)).toBeDefined();
   });
 
-  it('should display Incorta disclaimer', () => {
+  it('should render the Overview page title', () => {
     render(<App />);
-    expect(screen.getByText(/Live Incorta data integration is NOT implemented/i)).toBeDefined();
+    expect(screen.getByText(/Overview/i)).toBeDefined();
   });
 });

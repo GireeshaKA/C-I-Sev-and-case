@@ -27,23 +27,14 @@ export class MockDataProvider implements DataProvider {
     if (filters?.severity?.length) {
       result = result.filter((s) => filters.severity!.includes(s.severity));
     }
-    if (filters?.siteStatus?.length) {
-      result = result.filter((s) => filters.siteStatus!.includes(s.siteStatus));
-    }
     if (filters?.siteStage?.length) {
       result = result.filter((s) => filters.siteStage!.includes(s.siteStage));
     }
     if (filters?.connectionType?.length) {
       result = result.filter((s) => filters.connectionType!.includes(s.connectionType));
     }
-    if (filters?.envoyType?.length) {
-      result = result.filter((s) => filters.envoyType!.includes(s.envoyType));
-    }
-    if (filters?.state?.length) {
-      result = result.filter((s) => filters.state!.includes(s.state));
-    }
-    if (filters?.country?.length) {
-      result = result.filter((s) => filters.country!.includes(s.country));
+    if (filters?.miProductSku?.length) {
+      result = result.filter((s) => filters.miProductSku!.includes(s.miProductSku));
     }
     if (filters?.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
@@ -65,17 +56,20 @@ export class MockDataProvider implements DataProvider {
   async getCases(filters?: DashboardFilters): Promise<SfdcCase[]> {
     let result = [...this.cases];
 
-    if (filters?.caseStatus?.length) {
-      result = result.filter((c) => filters.caseStatus!.includes(c.caseStatus));
+    if (filters?.searchTerm) {
+      const term = filters.searchTerm.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.siteName.toLowerCase().includes(term) ||
+          c.siteId.toLowerCase().includes(term) ||
+          c.caseNumber.toLowerCase().includes(term)
+      );
     }
-    if (filters?.caseCategory?.length) {
-      result = result.filter((c) => filters.caseCategory!.includes(c.caseCategory));
+    if (filters?.connectionType?.length) {
+      result = result.filter((c) => filters.connectionType!.includes(c.connectionType as Site['connectionType']));
     }
-    if (filters?.caseType?.length) {
-      result = result.filter((c) => filters.caseType!.includes(c.caseType));
-    }
-    if (filters?.severity?.length) {
-      result = result.filter((c) => filters.severity!.includes(c.severity as SeverityLevel));
+    if (filters?.miProductSku?.length) {
+      result = result.filter((c) => filters.miProductSku!.includes(c.miProductSku));
     }
 
     return result;
@@ -89,20 +83,22 @@ export class MockDataProvider implements DataProvider {
     return this.cases.find((c) => c.caseNumber === caseNumber) ?? null;
   }
 
-  async getSeverityDistribution(_filters?: DashboardFilters): Promise<SeverityDistribution[]> {
-    const counts: Record<string, number> = {};
-    const sites = await this.getSites(_filters);
-
-    for (const site of sites) {
-      counts[site.severity] = (counts[site.severity] || 0) + 1;
-    }
-
+  async getSeverityDistribution(filters?: DashboardFilters): Promise<SeverityDistribution[]> {
+    const sites = await this.getSites(filters);
+    const levels: (1 | 2 | 3 | 4)[] = [1, 2, 3, 4];
     const total = sites.length;
-    return Object.entries(counts).map(([level, count]) => ({
-      level: level as SeverityLevel,
-      count,
-      percentage: total > 0 ? Math.round((count / total) * 100) : 0,
-    }));
+
+    return levels.map((level) => {
+      const levelSites = sites.filter((s) => s.severity === level);
+      return {
+        level: level as SeverityLevel,
+        count: levelSites.length,
+        percentage: total > 0 ? Math.round((levelSites.length / total) * 1000) / 10 : 0,
+        subcategoryA: levelSites.filter((s) => s.severitySubcategory === 'a').length,
+        subcategoryB: levelSites.filter((s) => s.severitySubcategory === 'b').length,
+        subcategoryC: levelSites.filter((s) => s.severitySubcategory === 'c').length,
+      };
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -110,36 +106,50 @@ export class MockDataProvider implements DataProvider {
     return [...this.historicalSeverity];
   }
 
-  async getKpis(_filters?: DashboardFilters): Promise<DashboardKpis> {
-    const sites = await this.getSites(_filters);
-    const cases = await this.getCases(_filters);
-    const openCases = cases.filter((c) => c.caseStatus !== 'Closed');
-    const siteIdsWithOpenCases = new Set(openCases.map((c) => c.siteId));
-    const criticalCases = openCases.filter((c) => c.severity === 'S0' || c.severity === 'S1');
-    const avgAge = openCases.length > 0
-      ? Math.round(openCases.reduce((sum, c) => sum + c.age, 0) / openCases.length)
-      : 0;
+  async getKpis(filters?: DashboardFilters): Promise<DashboardKpis> {
+    const sites = await this.getSites(filters);
+    const total = sites.length;
+    const sev1 = sites.filter((s) => s.severity === 1);
+    const sev2 = sites.filter((s) => s.severity === 2);
+    const sev3 = sites.filter((s) => s.severity === 3);
+    const sev4 = sites.filter((s) => s.severity === 4);
+    const sev123 = sev1.length + sev2.length + sev3.length;
+    const sev123a = [...sev1, ...sev2, ...sev3].filter((s) => s.severitySubcategory === 'a').length;
+    const sev123b = [...sev1, ...sev2, ...sev3].filter((s) => s.severitySubcategory === 'b').length;
+    const sev123c = [...sev1, ...sev2, ...sev3].filter((s) => s.severitySubcategory === 'c').length;
+    const openCaseSites = sites.filter((s) => s.hasOpenCase).length;
+
+    const pct = (n: number) => total > 0 ? Math.round((n / total) * 1000) / 10 : 0;
 
     return {
-      totalSites: { label: 'Total Sites', value: sites.length },
-      totalOpenCases: { label: 'Open Cases', value: openCases.length },
-      criticalSeverity: { label: 'Critical (S0/S1)', value: criticalCases.length },
-      sitesWithOpenCases: { label: 'Sites with Open Cases', value: siteIdsWithOpenCases.size },
-      sitesWithNoOpenCases: { label: 'Sites without Open Cases', value: sites.length - siteIdsWithOpenCases.size },
-      averageCaseAge: { label: 'Avg Case Age (days)', value: avgAge, unit: 'days' },
+      totalSites: { label: 'Total C&I Sites', value: total },
+      pctSev123: { label: '%Sites in Sev 1/2/3', value: `${pct(sev123)}%` },
+      countSev123: { label: '#Sites in Sev 1/2/3', value: sev123 },
+      sev123a: { label: '(a) Open, not In Progress', value: sev123a },
+      sev123b: { label: '(b) Open, In Progress', value: sev123b },
+      sev123c: { label: '(c) No open cases', value: sev123c },
+      pctSev4: { label: '%Sites in Sev 4', value: `${pct(sev4.length)}%` },
+      countSev4: { label: '#Sites in Sev 4', value: sev4.length },
+      pctSev1: { label: '%Sites in Sev 1', value: `${pct(sev1.length)}%` },
+      pctSev2: { label: '%Sites in Sev 2', value: `${pct(sev2.length)}%` },
+      pctSev3: { label: '%Sites in Sev 3', value: `${pct(sev3.length)}%` },
+      sitesWithOpenCases: { label: 'Sites with Open Cases', value: openCaseSites },
+      sitesWithNoOpenCases: { label: 'Sites without Open Cases', value: total - openCaseSites },
     };
   }
 
   async getFilterOptions(field: string): Promise<string[]> {
     switch (field) {
-      case 'state':
-        return [...new Set(this.sites.map((s) => s.state))].sort();
-      case 'country':
-        return [...new Set(this.sites.map((s) => s.country))].sort();
-      case 'installerName':
-        return [...new Set(this.sites.map((s) => s.installerName))].sort();
+      case 'connectionType':
+        return [...new Set(this.sites.map((s) => s.connectionType))].sort();
+      case 'siteStage':
+        return [...new Set(this.sites.map((s) => s.siteStage))].sort();
       case 'miProductSku':
         return [...new Set(this.sites.map((s) => s.miProductSku))].sort();
+      case 'installerName':
+        return [...new Set(this.sites.map((s) => s.installerName))].sort();
+      case 'state':
+        return [...new Set(this.sites.map((s) => s.state))].sort();
       default:
         return [];
     }
