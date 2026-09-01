@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route, NavLink, useNavigate, useParams } from 'r
 import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
 import {
   LayoutDashboard, Activity, FolderOpen, ListChecks, TrendingUp,
-  RefreshCw, User, ChevronLeft, X,
+  RefreshCw, User, ChevronLeft, X, AlertTriangle, Clock, Shield,
+  Search, Filter,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -39,6 +40,9 @@ const STATUS_COLORS: Record<string, string> = {
   'Meter Issue': '#7C3AED',
 };
 
+/* ---- SEVERITY LABELS ---- */
+const SEV_LABELS: Record<number, string> = { 1: 'Critical', 2: 'High', 3: 'Medium', 4: 'Low' };
+
 /* ---- HELPERS ---- */
 function sevBadgeClass(sev: number | null): string {
   if (sev === null) return 'sev-badge sev-none';
@@ -49,12 +53,15 @@ function statusBadgeClass(status: string): string {
   if (status.includes('Not Reporting')) return 'status-badge status-error';
   return 'status-badge status-issue';
 }
+function caseStatusBadgeClass(status: string): string {
+  if (status === 'New') return 'case-status-badge case-status-new';
+  return 'case-status-badge case-status-progress';
+}
 function formatSev(sev: number | null, sub: string | null): string {
   if (sev === null) return '—';
   if (sub) return `${sev}(${sub})`;
   return String(sev);
 }
-
 /* ---- PAGINATION HOOK ---- */
 function usePagination<T>(items: T[], pageSize: number) {
   const [page, setPage] = useState(0);
@@ -120,10 +127,33 @@ function Header() {
         <span className="tagline">Unified Site Health, Severity & Case Intelligence</span>
       </div>
       <div className="top-header-right">
-        <span className="refresh-badge"><RefreshCw size={12} /> Updated just now</span>
+        <span className="data-source-indicator">
+          <span className="data-source-dot" />
+          Data: Representative &middot; Live API: Pending Access
+        </span>
         <User size={16} />
       </div>
     </header>
+  );
+}
+
+/* ---- EMPTY STATE ---- */
+function EmptyState({ message = 'No data matches current filters', icon }: { message?: string; icon?: React.ReactNode }) {
+  return (
+    <div className="empty-state">
+      {icon || <Filter size={32} />}
+      <p>{message}</p>
+    </div>
+  );
+}
+
+/* ---- LOADING STATE ---- */
+function LoadingState() {
+  return (
+    <div className="loading-state">
+      <RefreshCw size={20} className="spin" />
+      <p>Loading...</p>
+    </div>
   );
 }
 
@@ -185,11 +215,18 @@ function FilterBar() {
 }
 
 /* ---- KPI CARD ---- */
-function KpiCard({ label, value, className = '', primary = false }: { label: string; value: string | number; className?: string; primary?: boolean }) {
+function KpiCard({ label, value, className = '', primary = false, icon, subtitle }: {
+  label: string; value: string | number; className?: string; primary?: boolean;
+  icon?: React.ReactNode; subtitle?: string;
+}) {
   return (
     <div className={`kpi-card${primary ? ' primary' : ''}`}>
-      <div className={`kpi-value ${className}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div>
+      <div className="kpi-card-header">
+        <div className={`kpi-value ${className}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div>
+        {icon && <div className="kpi-icon">{icon}</div>}
+      </div>
       <div className="kpi-label">{label}</div>
+      {subtitle && <div className="kpi-subtitle">{subtitle}</div>}
     </div>
   );
 }
@@ -206,9 +243,16 @@ function SiteTable({ sites, showSearch = true, onSiteClick }: { sites: Site[]; s
   const { page, setPage, totalPages, pageItems, total } = usePagination(sorted, 20);
   const arrow = (key: keyof Site) => sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
+  if (sites.length === 0) return <EmptyState message="No sites match current filters" />;
+
   return (
     <>
-      {showSearch && <input className="table-search" placeholder="Search sites..." value={search} onChange={(e) => setSearch(e.target.value)} />}
+      {showSearch && (
+        <div className="table-search-wrapper">
+          <Search size={14} className="table-search-icon" />
+          <input className="table-search" placeholder="Search by site name, ID, or installer..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+      )}
       <div className="table-wrapper" style={{ maxHeight: '400px', overflowY: 'auto' }}>
         <table className="data-table">
           <thead>
@@ -261,18 +305,27 @@ function OverviewPage() {
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [sevDist, setSevDist] = useState<SeverityDistribution[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [cases, setCases] = useState<SfdcCase[]>([]);
+  const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
   useEffect(() => {
-    dataProvider.getKpis(filters).then(setKpis);
-    dataProvider.getSeverityDistribution(filters).then(setSevDist);
-    dataProvider.getSites(filters).then(setSites);
+    setLoading(true);
+    Promise.all([
+      dataProvider.getKpis(filters),
+      dataProvider.getSeverityDistribution(filters),
+      dataProvider.getSites(filters),
+      dataProvider.getCases(filters),
+    ]).then(([k, sd, s, c]) => {
+      setKpis(k); setSevDist(sd); setSites(s); setCases(c); setLoading(false);
+    });
   }, [filters]);
 
-  if (!kpis) return null;
+  if (loading || !kpis) return <div className="page-content"><LoadingState /></div>;
 
   const sevBarData = sevDist.filter((d) => d.level !== null).map((d) => ({
-    name: `Sev ${d.level}`, total: d.count, a: d.subcategoryA, b: d.subcategoryB, c: d.subcategoryC,
+    name: `Sev ${d.level} · ${SEV_LABELS[d.level as number]}`,
+    total: d.count, a: d.subcategoryA, b: d.subcategoryB, c: d.subcategoryC,
     fill: SEV_COLORS[d.level as number] ?? '#999',
   }));
 
@@ -280,23 +333,59 @@ function OverviewPage() {
   sites.forEach((s) => { statusCounts[s.siteStatus] = (statusCounts[s.siteStatus] || 0) + 1; });
   const statusData = Object.entries(statusCounts).map(([name, value]) => ({ name, value, fill: STATUS_COLORS[name] ?? '#999' }));
 
+  const criticalSites = sites.filter((s) => s.severity === 1);
+  const highSevSites = sites.filter((s) => s.severity === 2);
+  const notReportingSites = sites.filter((s) => s.siteStatus.includes('Not Reporting'));
+  const openCaseCount = cases.length;
+  const newCases = cases.filter((c) => c.caseStatus === 'New');
+
   return (
     <div className="page-content">
       <h2 className="page-title">Overview</h2>
 
       {/* PRIMARY KPIs — executive summary */}
       <div className="kpi-group">
-        <div className="kpi-group-label">Summary</div>
+        <div className="kpi-group-label">Executive Summary</div>
         <div className="kpi-row">
-          <KpiCard label={kpis.totalSites.label} value={kpis.totalSites.value} primary />
-          <KpiCard label={kpis.pctSev123.label} value={kpis.pctSev123.value} className="orange" primary />
-          <KpiCard label={kpis.countSev123.label} value={kpis.countSev123.value} className="orange" />
+          <KpiCard label="Total C&I Sites" value={kpis.totalSites.value} primary icon={<LayoutDashboard size={18} />} />
+          <KpiCard label="Total Open Cases" value={openCaseCount} className="orange" primary icon={<FolderOpen size={18} />} />
+          <KpiCard label={kpis.pctSev123.label} value={kpis.pctSev123.value} className="orange" primary icon={<Shield size={18} />}
+            subtitle={`${kpis.countSev123.value} sites in Critical/High/Medium`} />
+          <KpiCard label="Sites with Open Cases" value={kpis.sitesWithOpenCases.value} className="sev1"
+            icon={<AlertTriangle size={18} />} />
+        </div>
+      </div>
+
+      {/* WHAT NEEDS ATTENTION */}
+      <div className="section-card attention-section">
+        <h3><AlertTriangle size={16} className="inline-icon" /> What Needs Attention</h3>
+        <div className="attention-grid">
+          <div className="attention-item attention-critical" onClick={() => nav('/site-health')}>
+            <div className="attention-count">{criticalSites.length}</div>
+            <div className="attention-label">Critical Sites (Sev 1)</div>
+            <div className="attention-desc">Immediate investigation needed</div>
+          </div>
+          <div className="attention-item attention-high" onClick={() => nav('/site-health')}>
+            <div className="attention-count">{highSevSites.length}</div>
+            <div className="attention-label">High Severity Sites (Sev 2)</div>
+            <div className="attention-desc">Escalation candidates</div>
+          </div>
+          <div className="attention-item attention-new" onClick={() => nav('/case-tracker')}>
+            <div className="attention-count">{newCases.length}</div>
+            <div className="attention-label">New Cases</div>
+            <div className="attention-desc">Awaiting triage</div>
+          </div>
+          <div className="attention-item attention-reporting" onClick={() => nav('/site-health')}>
+            <div className="attention-count">{notReportingSites.length}</div>
+            <div className="attention-label">Not Reporting</div>
+            <div className="attention-desc">Envoy/Microinverter communication lost</div>
+          </div>
         </div>
       </div>
 
       {/* SECONDARY KPIs — subcategory breakdown */}
       <div className="kpi-group">
-        <div className="kpi-group-label">Sev 1/2/3 Subcategories</div>
+        <div className="kpi-group-label">Severity 1/2/3 Subcategories</div>
         <div className="kpi-row">
           <KpiCard label={kpis.sev123a.label} value={kpis.sev123a.value} className="sev1" />
           <KpiCard label={kpis.sev123b.label} value={kpis.sev123b.value} className="sev3" />
@@ -306,14 +395,14 @@ function OverviewPage() {
         </div>
       </div>
 
-      {/* TERTIARY KPIs — per-level percentages */}
+      {/* Per-Level Breakdown with severity labels */}
       <div className="kpi-group">
         <div className="kpi-group-label">Per-Level Breakdown</div>
         <div className="kpi-row kpi-row-compact">
-          <KpiCard label={kpis.pctSev1.label} value={kpis.pctSev1.value} className="sev1" />
-          <KpiCard label={kpis.pctSev2.label} value={kpis.pctSev2.value} className="sev2" />
-          <KpiCard label={kpis.pctSev3.label} value={kpis.pctSev3.value} className="sev3" />
-          <KpiCard label={kpis.pctSev4.label} value={kpis.pctSev4.value} className="sev4" />
+          <KpiCard label="Sev 1 · Critical" value={kpis.pctSev1.value} className="sev1" />
+          <KpiCard label="Sev 2 · High" value={kpis.pctSev2.value} className="sev2" />
+          <KpiCard label="Sev 3 · Medium" value={kpis.pctSev3.value} className="sev3" />
+          <KpiCard label="Sev 4 · Low" value={kpis.pctSev4.value} className="sev4" />
         </div>
       </div>
 
@@ -324,7 +413,10 @@ function OverviewPage() {
           {sevDist.filter((d) => d.level !== null).map((d) => (
             <div key={d.level} className="sev-breakdown-item">
               <div className="sev-breakdown-header">
-                <span className={sevBadgeClass(d.level)}>Sev {d.level}</span>
+                <div>
+                  <span className={sevBadgeClass(d.level)}>Sev {d.level}</span>
+                  <span className="sev-label-text">{SEV_LABELS[d.level as number]}</span>
+                </div>
                 <span className="sev-breakdown-total">{d.count}</span>
               </div>
               <div className="sev-breakdown-subs">
@@ -351,7 +443,7 @@ function OverviewPage() {
           <h3>Severity Subcategory Breakdown</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={sevBarData} margin={{ left: 10 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
@@ -363,8 +455,7 @@ function OverviewPage() {
         </div>
 
         <div className="section-card">
-          <h3>Site Status Distribution<span className="demo-label">MOCK</span></h3>
-          <p className="section-subtitle">Status counts are generated from mock data — not production values</p>
+          <h3>Site Status Distribution</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, value }) => `${name}: ${value}`} labelLine={{ strokeWidth: 1 }} style={{ fontSize: 10 }}>
@@ -390,36 +481,73 @@ function SiteHealthPage() {
   const { filters } = useContext(FilterContext);
   const [sites, setSites] = useState<Site[]>([]);
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
+  const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
   useEffect(() => {
-    dataProvider.getSites(filters).then(setSites);
-    dataProvider.getKpis(filters).then(setKpis);
+    setLoading(true);
+    Promise.all([
+      dataProvider.getSites(filters),
+      dataProvider.getKpis(filters),
+    ]).then(([s, k]) => { setSites(s); setKpis(k); setLoading(false); });
   }, [filters]);
+
+  if (loading) return <div className="page-content"><LoadingState /></div>;
 
   const statusCounts: Record<string, number> = {};
   const connCounts: Record<string, number> = {};
+  const sevCounts: Record<string, number> = { 'Critical': 0, 'High': 0, 'Medium': 0, 'Low': 0, 'None': 0 };
   sites.forEach((s) => {
     statusCounts[s.siteStatus] = (statusCounts[s.siteStatus] || 0) + 1;
     connCounts[s.connectionType] = (connCounts[s.connectionType] || 0) + 1;
+    const label = s.severity ? SEV_LABELS[s.severity] : 'None';
+    sevCounts[label] = (sevCounts[label] || 0) + 1;
   });
   const statusData = Object.entries(statusCounts).map(([name, value]) => ({ name, value, fill: STATUS_COLORS[name] ?? '#999' }));
   const connData = Object.entries(connCounts).map(([name, value]) => ({ name, value }));
 
+  const healthyCount = statusCounts['Normal'] || 0;
+  const warningCount = (statusCounts['Production Issue'] || 0) + (statusCounts['Meter Issue'] || 0);
+  const criticalCount = (statusCounts['Microinverters Not Reporting'] || 0) + (statusCounts['Envoy Not Reporting'] || 0);
+
   return (
     <div className="page-content">
       <h2 className="page-title">Site Health</h2>
-      {kpis && (
-        <div className="kpi-row">
-          <KpiCard label="Total Sites" value={kpis.totalSites.value} primary />
-          <KpiCard label="Sites with Open Cases" value={kpis.sitesWithOpenCases.value} className="sev1" />
-          <KpiCard label="Sites without Open Cases" value={kpis.sitesWithNoOpenCases.value} className="sev4" />
+      <p className="page-description">Investigate site health, connection status, and severity distribution across the fleet.</p>
+
+      {/* Health Summary */}
+      <div className="kpi-row">
+        {kpis && <KpiCard label="Total Sites" value={kpis.totalSites.value} primary icon={<LayoutDashboard size={18} />} />}
+        <KpiCard label="Healthy" value={healthyCount} className="green" icon={<Activity size={18} />} subtitle="Normal status" />
+        <KpiCard label="Warning" value={warningCount} className="sev3" icon={<AlertTriangle size={18} />} subtitle="Production/Meter issues" />
+        <KpiCard label="Critical" value={criticalCount} className="sev1" icon={<Shield size={18} />} subtitle="Not reporting" />
+      </div>
+
+      {/* Severity Distribution Summary */}
+      <div className="section-card">
+        <h3>Severity Distribution</h3>
+        <div className="health-severity-bar">
+          {Object.entries(sevCounts).filter(([, v]) => v > 0).map(([label, count]) => {
+            const pct = sites.length > 0 ? (count / sites.length * 100) : 0;
+            const color = label === 'Critical' ? 'var(--sev1)' : label === 'High' ? 'var(--sev2)' : label === 'Medium' ? 'var(--sev3)' : label === 'Low' ? 'var(--sev4)' : 'var(--text-tertiary)';
+            return (
+              <div key={label} className="health-sev-segment" style={{ width: `${Math.max(pct, 2)}%`, background: color }} title={`${label}: ${count} (${pct.toFixed(1)}%)`}>
+                {pct > 5 && <span>{count}</span>}
+              </div>
+            );
+          })}
         </div>
-      )}
+        <div className="health-severity-legend">
+          {Object.entries(sevCounts).filter(([, v]) => v > 0).map(([label, count]) => {
+            const color = label === 'Critical' ? 'var(--sev1)' : label === 'High' ? 'var(--sev2)' : label === 'Medium' ? 'var(--sev3)' : label === 'Low' ? 'var(--sev4)' : 'var(--text-tertiary)';
+            return <span key={label} className="health-legend-item"><span className="health-legend-dot" style={{ background: color }} />{label}: {count}</span>;
+          })}
+        </div>
+      </div>
+
       <div className="chart-grid">
         <div className="section-card">
-          <h3>Status Distribution<span className="demo-label">MOCK</span></h3>
-          <p className="section-subtitle">Counts derived from mock data</p>
+          <h3>Status Distribution</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={statusData} layout="vertical" margin={{ left: 60 }}>
               <XAxis type="number" tick={{ fontSize: 11 }} />
@@ -455,9 +583,15 @@ function SiteHealthPage() {
 function OpenCasesPage() {
   const { filters } = useContext(FilterContext);
   const [sites, setSites] = useState<Site[]>([]);
+  const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
-  useEffect(() => { dataProvider.getSites(filters).then(setSites); }, [filters]);
+  useEffect(() => {
+    setLoading(true);
+    dataProvider.getSites(filters).then((s) => { setSites(s); setLoading(false); });
+  }, [filters]);
+
+  if (loading) return <div className="page-content"><LoadingState /></div>;
 
   const openCaseSites = sites.filter((s) => s.hasOpenCase);
   const noOpenCaseSites = sites.filter((s) => s.severity !== null && !s.hasOpenCase);
@@ -492,9 +626,13 @@ function CaseTrackerPage() {
   const { filters } = useContext(FilterContext);
   const [cases, setCases] = useState<SfdcCase[]>([]);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
-  useEffect(() => { dataProvider.getCases(filters).then(setCases); }, [filters]);
+  useEffect(() => {
+    setLoading(true);
+    dataProvider.getCases(filters).then((c) => { setCases(c); setLoading(false); });
+  }, [filters]);
 
   const filtered = useMemo(() => {
     if (!search) return cases;
@@ -508,62 +646,78 @@ function CaseTrackerPage() {
   const { page, setPage, totalPages, pageItems, total } = usePagination(sorted, 25);
   const arrow = (key: keyof SfdcCase) => sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
+  if (loading) return <div className="page-content"><LoadingState /></div>;
+
+  const newCount = cases.filter((c) => c.caseStatus === 'New').length;
+  const inProgressCount = cases.filter((c) => c.caseStatus === 'Case - In Progress').length;
+  const uniqueSites = new Set(cases.map((c) => c.siteId)).size;
+
   return (
     <div className="page-content">
       <h2 className="page-title">Case Tracker — Case-Level Records</h2>
       <p className="page-description">Each row is an individual <strong>SFDC case</strong>. For site-level grouping, see <span className="site-link" onClick={() => nav('/open-cases')}>Open Cases</span>.</p>
       <div className="kpi-row" style={{ marginTop: 12 }}>
-        <KpiCard label="Total Case Records" value={cases.length} primary />
+        <KpiCard label="Total Case Records" value={cases.length} primary icon={<ListChecks size={18} />} />
+        <KpiCard label="New Cases" value={newCount} className="sev1" icon={<AlertTriangle size={18} />} subtitle="Awaiting triage" />
+        <KpiCard label="In Progress" value={inProgressCount} className="sev3" icon={<Clock size={18} />} />
+        <KpiCard label="Affected Sites" value={uniqueSites} subtitle={`${(uniqueSites / Math.max(cases.length, 1) * 100).toFixed(0)}% unique`} />
       </div>
       <div className="section-card">
         <h3>C&I Sites Case Tracker</h3>
-        <input className="table-search" placeholder="Search cases..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <div className="table-wrapper" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th onClick={() => toggle('caseNumber')}>Case Number{arrow('caseNumber')}</th>
-                <th onClick={() => toggle('siteId')}>Site Id{arrow('siteId')}</th>
-                <th>Site Link</th>
-                <th onClick={() => toggle('siteName')}>Site Name{arrow('siteName')}</th>
-                <th onClick={() => toggle('siteStatus')}>Site Status{arrow('siteStatus')}</th>
-                <th onClick={() => toggle('lastIntervalEndDate')}>Last Interval (PST){arrow('lastIntervalEndDate')}</th>
-                <th onClick={() => toggle('miProductSku')}>MI Product SKU{arrow('miProductSku')}</th>
-                <th onClick={() => toggle('connectionType')}>Connection{arrow('connectionType')}</th>
-                <th onClick={() => toggle('caseStatus')}>Case Status{arrow('caseStatus')}</th>
-                <th onClick={() => toggle('severity')}>Severity{arrow('severity')}</th>
-                <th onClick={() => toggle('caseCategory')}>Category{arrow('caseCategory')}</th>
-                <th onClick={() => toggle('caseType')}>Case Type{arrow('caseType')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.map((c, i) => (
-                <tr key={`${c.caseNumber}-${i}`}>
-                  <td>{c.caseNumber}</td>
-                  <td>{c.siteId}</td>
-                  <td><span className="site-link" onClick={() => nav(`/site/${c.siteId}`)}>{c.siteLink}</span></td>
-                  <td title={c.siteName}>{c.siteName}</td>
-                  <td><span className={statusBadgeClass(c.siteStatus)}>{c.siteStatus}</span></td>
-                  <td>{c.lastIntervalEndDate}</td>
-                  <td>{c.miProductSku}</td>
-                  <td>{c.connectionType}</td>
-                  <td>{c.caseStatus}</td>
-                  <td><span className={sevBadgeClass(parseInt(c.severity) || null)}>{c.severity}</span></td>
-                  <td>{c.caseCategory}</td>
-                  <td>{c.caseType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="table-search-wrapper">
+          <Search size={14} className="table-search-icon" />
+          <input className="table-search" placeholder="Search by case number, site name, or ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className="table-footer">
-          <span>Displaying {total} row(s)</span>
-          <div className="pagination">
-            <button disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
-            <span>{page + 1} / {totalPages || 1}</span>
-            <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
-          </div>
-        </div>
+        {filtered.length === 0 ? <EmptyState message="No cases match the search criteria" /> : (
+          <>
+            <div className="table-wrapper" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => toggle('caseNumber')}>Case Number{arrow('caseNumber')}</th>
+                    <th onClick={() => toggle('siteId')}>Site Id{arrow('siteId')}</th>
+                    <th>Site Link</th>
+                    <th onClick={() => toggle('siteName')}>Site Name{arrow('siteName')}</th>
+                    <th onClick={() => toggle('siteStatus')}>Site Status{arrow('siteStatus')}</th>
+                    <th onClick={() => toggle('lastIntervalEndDate')}>Last Interval (PST){arrow('lastIntervalEndDate')}</th>
+                    <th onClick={() => toggle('miProductSku')}>MI Product SKU{arrow('miProductSku')}</th>
+                    <th onClick={() => toggle('connectionType')}>Connection{arrow('connectionType')}</th>
+                    <th onClick={() => toggle('caseStatus')}>Case Status{arrow('caseStatus')}</th>
+                    <th onClick={() => toggle('severity')}>Severity{arrow('severity')}</th>
+                    <th onClick={() => toggle('caseCategory')}>Category{arrow('caseCategory')}</th>
+                    <th onClick={() => toggle('caseType')}>Case Type{arrow('caseType')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageItems.map((c, i) => (
+                    <tr key={`${c.caseNumber}-${i}`}>
+                      <td><span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{c.caseNumber}</span></td>
+                      <td>{c.siteId}</td>
+                      <td><span className="site-link" onClick={() => nav(`/site/${c.siteId}`)}>{c.siteLink}</span></td>
+                      <td title={c.siteName}>{c.siteName}</td>
+                      <td><span className={statusBadgeClass(c.siteStatus)}>{c.siteStatus}</span></td>
+                      <td>{c.lastIntervalEndDate}</td>
+                      <td>{c.miProductSku}</td>
+                      <td>{c.connectionType}</td>
+                      <td><span className={caseStatusBadgeClass(c.caseStatus)}>{c.caseStatus}</span></td>
+                      <td><span className={sevBadgeClass(parseInt(c.severity) || null)}>{c.severity}</span></td>
+                      <td><span className="category-chip">{c.caseCategory}</span></td>
+                      <td>{c.caseType}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-footer">
+              <span>Displaying {total} row(s)</span>
+              <div className="pagination">
+                <button disabled={page === 0} onClick={() => setPage(page - 1)}>Prev</button>
+                <span>{page + 1} / {totalPages || 1}</span>
+                <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -759,14 +913,19 @@ function SiteDetailPage() {
     }
   }, [siteId]);
 
-  if (!site) return <div className="page-content"><p>Loading site...</p></div>;
+  if (!site) return <div className="page-content"><LoadingState /></div>;
 
   return (
     <div className="page-content">
       <div className="back-link" onClick={() => nav(-1)}>
         <ChevronLeft size={16} /> Back
       </div>
-      <h2 className="page-title">Site Detail: {site.siteName}</h2>
+      <div className="detail-header">
+        <h2 className="page-title" style={{ marginBottom: 0 }}>Site Detail: {site.siteName}</h2>
+        <span className={sevBadgeClass(site.severity)}>{formatSev(site.severity, site.severitySubcategory)}</span>
+        <span className={statusBadgeClass(site.siteStatus)}>{site.siteStatus}</span>
+        {site.hasOpenCase && <span className="case-status-badge case-status-new">Has Open Cases</span>}
+      </div>
 
       <div className="section-card">
         <div className="detail-grid">
@@ -794,7 +953,7 @@ function SiteDetailPage() {
         </div>
       </div>
 
-      {cases.length > 0 && (
+      {cases.length > 0 ? (
         <div className="section-card">
           <h3>Associated Cases ({cases.length})</h3>
           <div className="table-wrapper">
@@ -811,16 +970,21 @@ function SiteDetailPage() {
               <tbody>
                 {cases.map((c, i) => (
                   <tr key={i}>
-                    <td>{c.caseNumber}</td>
-                    <td>{c.caseStatus}</td>
+                    <td><span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{c.caseNumber}</span></td>
+                    <td><span className={caseStatusBadgeClass(c.caseStatus)}>{c.caseStatus}</span></td>
                     <td><span className={sevBadgeClass(parseInt(c.severity) || null)}>{c.severity}</span></td>
-                    <td>{c.caseCategory}</td>
+                    <td><span className="category-chip">{c.caseCategory}</span></td>
                     <td>{c.caseType}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+      ) : (
+        <div className="section-card">
+          <h3>Associated Cases</h3>
+          <EmptyState message="No cases associated with this site" icon={<FolderOpen size={32} />} />
         </div>
       )}
     </div>
