@@ -1,0 +1,12 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+
+[build.environment]
+  # Use representative mock data on Netlify (live data requires secure backend + INCORTA_PAT)
+  VITE_DATA_PROVIDER = "mock"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

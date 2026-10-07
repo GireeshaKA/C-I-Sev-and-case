@@ -3,6 +3,10 @@ import { mockSites } from './sites';
 
 const CASE_CATEGORIES: CaseCategory[] = ['Microinverter', 'Envoy', 'Meter', 'Other'];
 const CASE_TYPES: CaseType[] = ['MI. Drop Out', 'MI. AC Branch Issue', 'MI. Low Power', 'Envoy. Not Reporting', 'Meter. Issue'];
+const OWNERS = [
+  'Alex Chen', 'Priya Sharma', 'Jordan Lee', 'Sam Rodriguez', 'Morgan Taylor',
+  'Casey Williams', 'Riley Johnson', 'Dakota Brown', 'Jamie Patel', 'Quinn Martinez',
+];
 
 function seededRandom(seed: number) {
   let s = seed;
@@ -10,6 +14,12 @@ function seededRandom(seed: number) {
 }
 const rand = seededRandom(99);
 function pick<T>(arr: T[]): T { return arr[Math.floor(rand() * arr.length)]; }
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
 
 function generateCases(): SfdcCase[] {
   const cases: SfdcCase[] = [];
@@ -20,6 +30,7 @@ function generateCases(): SfdcCase[] {
     for (let i = 0; i < numCases; i++) {
       const sub = site.severitySubcategory ?? 'b';
       const caseStatus: CaseStatus = sub === 'a' ? 'New' : 'Case - In Progress';
+      const age = Math.floor(rand() * 60) + 1;
       cases.push({
         caseNumber: String(19000000 + Math.floor(rand() * 2000000)),
         siteId: site.siteId,
@@ -33,6 +44,12 @@ function generateCases(): SfdcCase[] {
         severity: `${site.severity}(${sub})`,
         caseCategory: pick(CASE_CATEGORIES),
         caseType: pick(CASE_TYPES),
+        caseOwner: pick(OWNERS),
+        caseAge: age,
+        createdDate: daysAgo(age),
+        lastUpdate: daysAgo(Math.floor(rand() * Math.min(age, 14))),
+        installerName: site.installerName,
+        state: site.state,
       });
     }
   }

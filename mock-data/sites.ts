@@ -1,4 +1,5 @@
 import type { Site, SiteStage, SiteStatus, ConnectionType, EnvoyType, SeverityLevel, SeveritySubcategory } from '../src/types';
+import { classifyMicroinverterType } from '../src/utils/skuFamily';
 
 const NAMES = [
   'Derek Shannon 2040 South Navajo','Dunsoth Fire Department','Chrome Solar Corp',
@@ -29,7 +30,17 @@ const INSTALLERS = [
 ];
 const STATES = ['CA','CO','MD','WA','ND','IL','IA','DC','TX','NY','FL','OR','AZ','NV','GA'];
 const COUNTRIES: string[] = ['US','US','US','US','US','US','US','US','US','MX'];
-const SKUS = ['IQ8P-3P-72-E-US','IQ8P-3P-72-E-DOM-US','IQ8H-3P-72-E-US','IQ9N-3P-277-A-US','IQ9N-3P-277-A-DOM-US','IQ9S-3P-277-B-DOM-US'];
+// Weighted to match real Incorta fleet distribution (verified via diagnose-columns.mjs):
+//   IQ8P-3P-72-E-US:     ~53%  (266/500 rows observed)
+//   IQ8H-3P-72-E-US:     ~24%  (122/500)
+//   IQ8P-3P-72-E-DOM-US: ~20%  (100/500)
+//   IQ9N-3P-277-A-DOM-US: ~3%  (12/500)
+const SKUS = [
+  ...Array(16).fill('IQ8P-3P-72-E-US'),
+  ...Array(7).fill('IQ8H-3P-72-E-US'),
+  ...Array(6).fill('IQ8P-3P-72-E-DOM-US'),
+  'IQ9N-3P-277-A-DOM-US',
+];
 const STAGES: SiteStage[] = ['Ready','Final','Verifying'];
 const STATUSES: SiteStatus[] = ['Normal','Production Issue','Microinverters Not Reporting','Envoy Not Reporting','Meter Issue'];
 const CONNS: ConnectionType[] = ['Ethernet','Wifi','Cellular'];
@@ -51,17 +62,42 @@ function genDate(): string {
 
 function makeSite(sev: SeverityLevel, sub: SeveritySubcategory | null, idx: number): Site {
   const hasOpen = sub === 'a' || sub === 'b';
+  const status: SiteStatus = hasOpen ? pick(STATUSES.filter(s => s !== 'Normal')) : (sev ? pick(STATUSES) : 'Normal');
+  const sku = pick(SKUS);
+  const microCount = Math.floor(rand() * 400) + 5;
+  const days = Math.floor(rand() * 7) + 1;
+  const energyBase = sev === 1 ? 200 : sev === 2 ? 600 : sev === 3 ? 900 : 1400;
+  const energyPerMicro = energyBase + rand() * 500;
+  let healthScore = 100;
+  if (sev === 1) healthScore -= 40;
+  else if (sev === 2) healthScore -= 25;
+  else if (sev === 3) healthScore -= 15;
+  else if (sev === 4) healthScore -= 5;
+  if (status === 'Envoy Not Reporting') healthScore -= 30;
+  else if (status === 'Microinverters Not Reporting') healthScore -= 25;
+  else if (status === 'Production Issue') healthScore -= 15;
+  else if (status === 'Meter Issue') healthScore -= 10;
+  healthScore = Math.max(0, Math.min(100, healthScore));
+
   return {
     siteId: genId(), siteName: NAMES[idx % NAMES.length],
     siteStage: pick(STAGES.filter(s => s !== 'Verifying')),
-    siteStatus: hasOpen ? pick(STATUSES.filter(s => s !== 'Normal')) : (sev ? pick(STATUSES) : 'Normal'),
-    lastIntervalEndDate: genDate(), microCount: Math.floor(rand() * 400) + 5,
-    envoyCount: Math.floor(rand() * 4) + 1, miProductSku: pick(SKUS),
+    siteStatus: status, statusReason: '',
+    lastIntervalEndDate: genDate(), microCount,
+    envoyCount: Math.floor(rand() * 4) + 1, miProductSku: sku,
+    microinverterType: classifyMicroinverterType(sku),
     envoyType: pick(ENVOYS), installerName: pick(INSTALLERS),
     state: pick(STATES), country: pick(COUNTRIES), connectionType: pick(CONNS),
     severity: sev, severitySubcategory: sub,
     invProduced: `521-00006-r-${String(Math.floor(rand() * 10)).padStart(2,'0')}-r02-57.03`,
     invParamBld: '549-00068-r01-r02-57.03', hasOpenCase: hasOpen,
+    meterEnergy: microCount * energyPerMicro * days * (0.95 + rand() * 0.1),
+    microEnergy: microCount * energyPerMicro * days,
+    energyPerMicroPerDay: Math.round(energyPerMicro * 10) / 10,
+    daysProducing: days,
+    siteCreatedAt: `2025-${String(Math.floor(rand() * 12) + 1).padStart(2,'0')}-${String(Math.floor(rand() * 28) + 1).padStart(2,'0')}`,
+    emuSwVersion: `D${Math.floor(rand() * 3) + 7}.${Math.floor(rand() * 4)}.${Math.floor(rand() * 9999)}`,
+    healthScore,
   };
 }
 

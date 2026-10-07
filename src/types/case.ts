@@ -1,4 +1,4 @@
-export type CaseStatus = 'New' | 'Case - In Progress';
+export type CaseStatus = 'New' | 'Case - In Progress' | 'Escalated' | 'Waiting on Customer';
 
 export type CaseCategory = 'Microinverter' | 'Envoy' | 'Meter' | 'Other';
 
@@ -22,4 +22,10 @@ export interface SfdcCase {
   severity: string;
   caseCategory: CaseCategory;
   caseType: CaseType;
+  caseOwner: string;
+  caseAge: number;              // days since creation
+  createdDate: string;          // ISO date
+  lastUpdate: string;           // ISO date
+  installerName: string;
+  state: string;
 }

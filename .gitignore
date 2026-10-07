@@ -26,6 +26,7 @@ dist-ssr
 # Environment variables and secrets
 .env
 .env.*
+!.env.example
 .env.local
 .env.development
 .env.production
@@ -74,3 +75,6 @@ Desktop.ini
 # Coverage
 coverage
 *.lcov
+
+# Local Netlify folder
+.netlify

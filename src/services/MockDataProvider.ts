@@ -33,6 +33,9 @@ export class MockDataProvider implements DataProvider {
     if (filters?.connectionType?.length) {
       result = result.filter((s) => filters.connectionType!.includes(s.connectionType));
     }
+    if (filters?.microinverterType?.length) {
+      result = result.filter((s) => filters.microinverterType!.includes(s.microinverterType));
+    }
     if (filters?.miProductSku?.length) {
       result = result.filter((s) => filters.miProductSku!.includes(s.miProductSku));
     }
@@ -144,6 +147,8 @@ export class MockDataProvider implements DataProvider {
         return [...new Set(this.sites.map((s) => s.connectionType))].sort();
       case 'siteStage':
         return [...new Set(this.sites.map((s) => s.siteStage))].sort();
+      case 'microinverterType':
+        return [...new Set(this.sites.map((s) => s.microinverterType))].sort();
       case 'miProductSku':
         return [...new Set(this.sites.map((s) => s.miProductSku))].sort();
       case 'installerName':

@@ -1,3 +1,6 @@
+import type { MicroinverterType } from '../utils/skuFamily';
+export type { MicroinverterType };
+
 export type SeverityLevel = 1 | 2 | 3 | 4 | null;
 
 export type SeveritySubcategory = 'a' | 'b' | 'c';
@@ -23,6 +26,7 @@ export interface Site {
   siteName: string;
   siteStage: SiteStage;
   siteStatus: SiteStatus;
+  statusReason: string;
   lastIntervalEndDate: string;
   microCount: number;
   envoyCount: number;
@@ -37,4 +41,13 @@ export interface Site {
   invProduced: string;
   invParamBld: string;
   hasOpenCase: boolean;
+  /* — extended fields from Incorta insight — */
+  meterEnergy: number;
+  microEnergy: number;
+  energyPerMicroPerDay: number;
+  daysProducing: number;
+  siteCreatedAt: string;
+  emuSwVersion: string;
+  healthScore: number;          // 0-100 composite score computed at ingest
+  microinverterType: MicroinverterType;  // DERIVED from miProductSku via classifyMicroinverterType()
 }
